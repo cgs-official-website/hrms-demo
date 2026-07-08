@@ -1,0 +1,74 @@
+workflows:
+  ios-capacitor-build:
+    name: Attendance CGS - iOS Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      vars:
+        # These are placeholders — set the REAL values in
+        # Codemagic dashboard → Environment variables (do NOT put secrets here)
+        VITE_FIREBASE_API_KEY: $VITE_FIREBASE_API_KEY
+        VITE_FIREBASE_AUTH_DOMAIN: $VITE_FIREBASE_AUTH_DOMAIN
+        VITE_FIREBASE_PROJECT_ID: $VITE_FIREBASE_PROJECT_ID
+        VITE_FIREBASE_STORAGE_BUCKET: $VITE_FIREBASE_STORAGE_BUCKET
+        VITE_FIREBASE_MESSAGING_SENDER_ID: $VITE_FIREBASE_MESSAGING_SENDER_ID
+        VITE_FIREBASE_APP_ID: $VITE_FIREBASE_APP_ID
+        VITE_GROQ_API_KEY: $VITE_GROQ_API_KEY
+      node: 20
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm install
+
+      - name: Write .env file from Codemagic variables
+        script: |
+          cat > .env <<EOF
+          VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY
+          VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN
+          VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID
+          VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET
+          VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID
+          VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID
+          VITE_GROQ_API_KEY=$VITE_GROQ_API_KEY
+          EOF
+
+      - name: Build web app (Vite)
+        script: |
+          npm run build
+
+      - name: Install Capacitor iOS platform
+        script: |
+          npm install @capacitor/ios
+          npx cap add ios || true
+          npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App && pod install
+
+      - name: Set up code signing (unsigned/dev build)
+        script: |
+          # For a simple .ipa without App Store signing,
+          # we build for "Any iOS Device" without exporting a signed archive.
+          echo "Skipping signing setup — building unsigned dev artifact"
+
+      - name: Build .xcarchive
+        script: |
+          xcode-project build-ipa \
+            --workspace "ios/App/App.xcworkspace" \
+            --scheme "App"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      email:
+        recipients:
+          - nikilhadinesh@gmail.com
+        notify:
+          success: true
+          failure: true
