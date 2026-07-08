@@ -41,12 +41,25 @@ workflows:
 
       - name: Install Capacitor iOS platform
         script: |
-          npm install @capacitor/ios
-          npx cap add ios || true
+          # @capacitor/cli is required for the `cap` command to exist.
+          # Without it, `npx cap ...` fails with
+          # "could not determine executable to run" and silently
+          # does nothing (ios/ folder never gets created).
+          npm install @capacitor/cli @capacitor/core @capacitor/ios
+
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
           npx cap sync ios
+
           # Force Podfile deployment target so a stale committed Podfile
           # doesn't conflict with the freshly installed Capacitor iOS pod
-          sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/" ios/App/Podfile
+          if [ -f ios/App/Podfile ]; then
+            sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/" ios/App/Podfile
+          else
+            echo "ERROR: ios/App/Podfile still missing after cap add ios"
+            exit 1
+          fi
 
       - name: Install CocoaPods dependencies
         script: |
