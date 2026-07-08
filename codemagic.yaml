@@ -41,13 +41,18 @@ workflows:
 
       - name: Install Capacitor iOS platform
         script: |
-          npm install @capacitor/core @capacitor/cli @capacitor/ios
+          npm install @capacitor/ios
           npx cap add ios || true
           npx cap sync ios
+          # Force Podfile deployment target so a stale committed Podfile
+          # doesn't conflict with the freshly installed Capacitor iOS pod
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/" ios/App/Podfile
 
       - name: Install CocoaPods dependencies
         script: |
-          cd ios/App && pod install
+          cd ios/App
+          pod repo update
+          pod install
 
       - name: Set up code signing (unsigned/dev build)
         script: |
