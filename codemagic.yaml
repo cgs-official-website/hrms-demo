@@ -41,7 +41,7 @@ workflows:
 
       - name: Install Capacitor iOS platform
         script: |
-          npm install @capacitor/ios
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
           npx cap add ios || true
           npx cap sync ios
 
