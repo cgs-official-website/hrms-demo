@@ -62,16 +62,16 @@ workflows:
           #    AnylineTireTreadSdk) inherits the same 15.0 target, so a
           #    lower per-pod deployment target can't conflict.
           if ! grep -q "IPHONEOS_DEPLOYMENT_TARGET" ios/App/Podfile; then
-            cat >> ios/App/Podfile << 'EOF'
-
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-    end
-  end
-end
-EOF
+            printf '%s\n' \
+              '' \
+              "post_install do |installer|" \
+              "  installer.pods_project.targets.each do |target|" \
+              "    target.build_configurations.each do |config|" \
+              "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'" \
+              "    end" \
+              "  end" \
+              "end" \
+              >> ios/App/Podfile
           fi
 
           # 3) Force the Xcode project's own deployment target too,
