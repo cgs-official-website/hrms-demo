@@ -42,9 +42,6 @@ workflows:
       - name: Install Capacitor iOS platform
         script: |
           # @capacitor/cli is required for the `cap` command to exist.
-          # Without it, `npx cap ...` fails with
-          # "could not determine executable to run" and silently
-          # does nothing (ios/ folder never gets created).
           npm install @capacitor/cli @capacitor/core @capacitor/ios
 
           if [ ! -d "ios" ]; then
@@ -52,14 +49,34 @@ workflows:
           fi
           npx cap sync ios
 
-          # Force Podfile deployment target so a stale committed Podfile
-          # doesn't conflict with the freshly installed Capacitor iOS pod
+          # Capacitor 8 requires a minimum of iOS 15.0.
+          # 1) Force the Podfile's own platform line
           if [ -f ios/App/Podfile ]; then
-            sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/" ios/App/Podfile
+            sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/" ios/App/Podfile
           else
             echo "ERROR: ios/App/Podfile still missing after cap add ios"
             exit 1
           fi
+
+          # 2) Make sure every pod (including any third-party SDKs like
+          #    AnylineTireTreadSdk) inherits the same 15.0 target, so a
+          #    lower per-pod deployment target can't conflict.
+          if ! grep -q "IPHONEOS_DEPLOYMENT_TARGET" ios/App/Podfile; then
+            cat >> ios/App/Podfile << 'EOF'
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+end
+EOF
+          fi
+
+          # 3) Force the Xcode project's own deployment target too,
+          #    in case it's committed at an older value (e.g. 13.0).
+          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/App/App.xcodeproj/project.pbxproj
 
       - name: Install CocoaPods dependencies
         script: |
