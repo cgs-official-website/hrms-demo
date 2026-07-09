@@ -57,18 +57,19 @@ workflows:
 
       - name: Set up code signing (unsigned/dev build)
         script: |
-          # For a simple .ipa without App Store signing,
-          # we build for "Any iOS Device" without exporting a signed archive.
+          # Testing-only build — no Apple signing configured.
           echo "Skipping signing setup — building unsigned dev artifact"
 
       - name: Build .xcarchive
         script: |
-          xcode-project build-ipa \
-            --workspace "ios/App/App.xcworkspace" \
-            --scheme "App"
+          xcodebuild archive \
+            -workspace "ios/App/App.xcworkspace" \
+            -scheme "App" \
+            -archivePath "build/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/App.xcarchive
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
