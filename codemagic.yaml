@@ -45,38 +45,9 @@ workflows:
           npm install @capacitor/cli @capacitor/core @capacitor/ios
 
           if [ ! -d "ios" ]; then
-            npx cap add ios
+            npx cap add ios --packagemanager Cocoapods
           fi
           npx cap sync ios
-
-          # Capacitor 8 requires a minimum of iOS 15.0.
-          # 1) Force the Podfile's own platform line
-          if [ -f ios/App/Podfile ]; then
-            sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/" ios/App/Podfile
-          else
-            echo "ERROR: ios/App/Podfile still missing after cap add ios"
-            exit 1
-          fi
-
-          # 2) Make sure every pod (including any third-party SDKs like
-          #    AnylineTireTreadSdk) inherits the same 15.0 target, so a
-          #    lower per-pod deployment target can't conflict.
-          if ! grep -q "IPHONEOS_DEPLOYMENT_TARGET" ios/App/Podfile; then
-            printf '%s\n' \
-              '' \
-              "post_install do |installer|" \
-              "  installer.pods_project.targets.each do |target|" \
-              "    target.build_configurations.each do |config|" \
-              "      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'" \
-              "    end" \
-              "  end" \
-              "end" \
-              >> ios/App/Podfile
-          fi
-
-          # 3) Force the Xcode project's own deployment target too,
-          #    in case it's committed at an older value (e.g. 13.0).
-          sed -i '' "s/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/g" ios/App/App.xcodeproj/project.pbxproj
 
       - name: Install CocoaPods dependencies
         script: |
